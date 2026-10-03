@@ -29,6 +29,22 @@ CREATE TABLE IF NOT EXISTS libraries (
 );
 CREATE INDEX IF NOT EXISTS idx_libraries_state ON libraries(state);
 CREATE INDEX IF NOT EXISTS idx_libraries_kind  ON libraries(kind);
+
+CREATE TABLE IF NOT EXISTS tickets (
+    id                 TEXT PRIMARY KEY,
+    subject            TEXT NOT NULL,
+    body               TEXT NOT NULL,
+    category           TEXT NOT NULL,
+    priority           TEXT NOT NULL,
+    team               TEXT NOT NULL,
+    draft_reply        TEXT NOT NULL,
+    status             TEXT NOT NULL,
+    model_value        TEXT NOT NULL,
+    model_confidence   REAL NOT NULL,
+    model_version      TEXT NOT NULL,
+    model_latency_ms   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 """
 
 
@@ -74,11 +90,12 @@ _conn: sqlite3.Connection | None = None
 
 def get_db() -> Iterator[sqlite3.Connection]:
     """FastAPI dependency. Use it as ``db: sqlite3.Connection = Depends(get_db)``."""
-    global _conn
-    if _conn is None:
-        _conn = connect(DB_PATH)
-        init(_conn)
-    yield _conn
+    conn = connect(DB_PATH)
+    init(conn)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def reset(path: Path | str | None = None) -> None:
